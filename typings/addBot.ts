@@ -1,6 +1,7 @@
 export interface AddBotArgs {
-    name: string | null
-    description?: string | null
+    id: string | null
+    description: string | null
+    prefix: string | null
 }
 
 export interface AddBotReturnType {

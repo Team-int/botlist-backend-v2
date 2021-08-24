@@ -1,5 +1,5 @@
 export interface LoginArgs {
-    code: string
+    code: string | null
 }
 
 export interface LoginReturnType {
@@ -28,5 +28,4 @@ export interface UserResult {
     discriminator?: string 
     banner_color?: string 
     email?: string 
-    verified?: boolean 
 }
