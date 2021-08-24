@@ -1,54 +1,25 @@
-import { LoginArgs, LoginReturnType, OauthResult, UserResult } from 'typings/login'
-import fetch from 'node-fetch'
+import { LoginArgs, LoginReturnType, UserResult } from 'typings/login'
+import oauthResult from '../../api/oauthResult'
 import client from '../../client'
+import userResult from '../../api/userResult'
 
 export default {
   Mutation: {
     login: async(_: void, { code }: LoginArgs): Promise<LoginReturnType> => {
       try {
-        const CLIENT_SECRET: string = process.env.DISCORD_CLIENT_SECRET || '' 
-        const CLIENT_ID: string = process.env.DISCORD_CLIENT_ID || ''
-        const REDIRECT_URL: string = process.env.REDIRECT_URL || ''
-  
-        console.log(CLIENT_ID, CLIENT_SECRET, REDIRECT_URL)
-        const options = {
-          url: 'https://discord.com/api/oauth2/token',
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
-          body: new URLSearchParams({
-            client_id: CLIENT_ID,
-            client_secret: CLIENT_SECRET,
-            grant_type: 'authorization_code',
-            code,
-            redirect_uri: REDIRECT_URL,
-            scope: 'identify'
-          })
-        }
-        const oauthResult = await fetch('https://discord.com/api/oauth2/token', options)
-        const { access_token, refresh_token, expires_in, scope, token_type }: OauthResult = await oauthResult.json()
-        if(scope !== 'identify') {
-          return {
-            ok: false,
-            error: 'Invaild scope.'
-          }
-        }
+        if(!code) throw new Error('Please fill in the required fields.')
         
-        const userResult = await fetch('https://discord.com/api/users/@me', {
-          headers: {
-            authorization: `${token_type} ${access_token}`
-          }
-        })
+        const { access_token, refresh_token, expires_in, scope, token_type } = await oauthResult(code)
+        if(scope !== 'identify')  throw new Error('Invaild scope.')
+        if((!access_token) || (!token_type)) throw new Error('Invaild access token or token type.')
         const { 
           id, 
           username, 
           avatar, 
           discriminator, 
           banner_color, 
-          email, 
-          verified 
-        }: UserResult = await userResult.json()
+          email
+        }: UserResult = await userResult(token_type, access_token)
         const existingUser = await client.user.findUnique({
           select: {
             id: true
@@ -58,7 +29,7 @@ export default {
         })
 
         if(!existingUser) {
-          if(id && username && discriminator && banner_color && email && verified) {
+          if(id && username && discriminator && banner_color && email) {
             await client.user.create({
               data: {
                 id,
@@ -66,10 +37,21 @@ export default {
                 avatar: `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`,
                 bannerColor: banner_color,
                 email,
-                verified
               }
             })
           }
+        } else {
+          await client.user.update({
+            where: {
+              id
+            }, data: {
+              id,
+              tag: `${username}#${discriminator}`,
+              avatar: `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`,
+              bannerColor: banner_color,
+              email,
+            }
+          })
         }
 
         return {

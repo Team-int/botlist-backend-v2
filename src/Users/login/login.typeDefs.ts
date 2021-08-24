@@ -6,6 +6,8 @@ export default gql`
         error: String
         accessToken: String
         refreshToken: String
+        expiresIn: String
+        tokenType: String
     }
     type Mutation {
         login(code: String!): loginResult!
