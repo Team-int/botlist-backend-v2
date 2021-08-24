@@ -7,6 +7,6 @@ export default gql`
     }
 
     type Mutation {
-        addBot(name: String! description: String): AddBotResult!
+        addBot(id: String! description: String!, prefix: String! ): AddBotResult!
     }
 `
